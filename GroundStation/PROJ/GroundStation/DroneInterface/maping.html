@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8' />
+    <meta http-equiv="Access-Control-Allow-Origin" content="*">
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src="assets/js/mapbox-gl.js"></script>
+    <link href="assets/css/mapbox-gl.css" rel='stylesheet' />
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <script src="assets/js/jquery.min.js" type="text/javascript"></script>
+    <script src="assets/js/mqttws31.js" type="text/javascript"></script>
+</head>
+
+<body>
+    <div id='map'>
+        <button class="button" style="position: absolute; top:0; left:0; margin:1% 0px 0px 1%; z-index: 1;" onclick="returnToHome()">Return Drone To Home</button>
+    </div>
+    <div id="myModal" class="modal">
+        <!-- Modal content -->
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Send Drone to Location
+            </h2>
+            <h4>
+                <span id="type_span"></span>
+            </h4>
+            <p>
+                <span id="loc_span"></span>
+            </p>
+            <hr>
+            <ul class="actions" style="text-align: right">
+                <li>
+                    <a href="#" class="button special small fit" onclick="closeSpan()">Cancel</a>
+                </li>
+                <li>
+                    <a href="#" class="button alt  small fit" id="send_btn" onclick="sendLocation()">Confirm</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div id="myModal2" class="modal">
+        <!-- Modal content -->
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Drone Information
+            </h2>
+            <h4>
+                <span id="type_spanDrone"></span>
+            </h4>
+            <p>
+                <span id="loc_spanDrone"></span>
+            </p>
+            <hr>
+            <ul class="actions" style="text-align: right">
+                <li>
+                    <a href="#" class="button special small fit" onclick="closeSpan()">Cancel</a>
+                </li>
+                <li>
+                    <a href="#" class="button alt  small fit" id="send_btn1" onclick="returnToHome2()">Return to Home</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <script type="text/javascript" src="socket_client.js"></script>
+    <script>
+        var coords;
+        var type;
+        var modal;
+        var modal2;
+        var sendData;
+
+        var centroid = [-8.659501, 40.633161];;
+        var module_id;
+        var data;
+        var startPoints = [[0, 0], [0, 0]];
+        var index = 0;
+
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function () {
+            if (this.readyState == 4 && this.status == 200) {
+                var response = xhttp.responseText;
+                process(response);
+            }
+        };
+        xhttp.open("GET", "http://localhost:5000/GPSLocations.json", true);
+        xhttp.send();
+        
+        function process(objs) {
+            data = JSON.parse(objs);
+            data.features.forEach(function (marker) {
+                if (marker.type == "drone") {
+                    centroid = marker.coords;
+                }
+                if (marker.type == "start") {
+                    startPoints[index] = marker.coords;
+                    index += 1;
+                }
+            });
+            var map = new mapboxgl.Map({
+                container: 'map',
+                style: 'http://localhost:8080/styles/osm-bright/style.json',
+                center: centroid,
+                zoom: 18
+            });
+            map.addControl(new mapboxgl.NavigationControl());
+            map.addControl(new mapboxgl.GeolocateControl({
+                positionOptions: {
+                    enableHighAccuracy: true
+                },
+                trackUserLocation: true
+            }));
+            data.features.forEach(function (marker) {
+                var el = document.createElement('div');
+                el.className = 'marker';
+                if (marker.type == "drone") {
+                    el.style.backgroundImage = 'url(images/gps_drone.png)';
+                }
+                else if (marker.type == "boat") {
+                    el.style.backgroundImage = 'url(images/gps_boat.png)';
+                } else if (marker.type == 'buoy') {
+                    el.style.backgroundImage = 'url(images/gps_bouy.png)';
+                } else if (marker.type == "start") {
+                    el.style.backgroundImage = 'url(images/gps_start.png)';
+                }
+                el.style.width = 35 + 'px';
+                el.style.height = 50 + 'px';
+
+                el.addEventListener('click', function () {
+                    modal = document.getElementById('myModal');
+                    modal2 = document.getElementById('myModal2');
+
+                    var span = document.getElementsByClassName("close")[0];
+                    var span2 = document.getElementsByClassName("close")[1];
+                    var outputloc = document.getElementById("loc_span");
+                    var outputype = document.getElementById("type_span");
+                    var outputlocDrone = document.getElementById("loc_spanDrone");
+                    var outputypeDrone = document.getElementById("type_spanDrone");
+                    var outputOrDrone = document.getElementById("or_spanDrone");
+
+                    outputypeDrone.innerHTML = "Object Type: " + marker.type + " <h5> ID: " + marker.deviceId +"</h5>";
+                    outputlocDrone.innerHTML = "Location: " + marker.coords + " Orientation : " + marker.degree;
+
+                    outputype.innerHTML = "Object Type: " + marker.type + " <h5> ID: " + marker.deviceId +"</h5>"
+                    outputloc.innerHTML = "Location: " + marker.coords;
+
+
+                    module_id = marker.deviceId;
+                    coords = marker.coords;
+                    type = marker.type;
+                    if (marker.type == "drone") {
+                        modal2.style.display = "block";
+                    } else {
+                        modal.style.display = "block";
+                    }
+
+                    span.onclick = function () {
+                        modal.style.display = "none";
+                        window.onclick = function (event) {
+                            if (event.target == modal) {
+                                modal.style.display = "none";
+                            }
+                        }
+                    }
+                    span2.onclick = function () {
+                        modal2.style.display = "none";
+                        window.onclick = function (event) {
+                            if (event.target == modal2) {
+                                modal2.style.display = "none";
+                            }
+                        }
+                    }
+                });
+                new mapboxgl.Marker(el)
+                    .setLngLat(marker.coords)
+                    .addTo(map);
+            });
+            map.on('load', function () {
+
+                map.addLayer({
+                    "id": "route",
+                    "type": "line",
+                    "source": {
+                        "type": "geojson",
+                        "data": {
+                            "type": "Feature",
+                            "properties": {},
+                            "geometry": {
+                                "type": "LineString",
+                                "coordinates": [
+                                    startPoints[0],
+                                    startPoints[1]
+                                ]
+                            }
+                        }
+                    },
+                    "layout": {
+                        "line-join": "round",
+                        "line-cap": "round"
+                    },
+                    "paint": {
+                        "line-color": "#888",
+                        "line-width": 8
+                    }
+                });
+            });
+
+
+        }
+        function getLatLngCenter(latLngInDegr) {
+            var LATIDX = 0;
+            var LNGIDX = 1;
+            var sumX = 0;
+            var sumY = 0;
+            var sumZ = 0;
+
+            for (var i = 0; i < latLngInDegr.length; i++) {
+                var lat = degr2rad(latLngInDegr[i][LATIDX]);
+                var lng = degr2rad(latLngInDegr[i][LNGIDX]);
+                sumX += Math.cos(lat) * Math.cos(lng);
+                sumY += Math.cos(lat) * Math.sin(lng);
+                sumZ += Math.sin(lat);
+            }
+
+            var avgX = sumX / latLngInDegr.length;
+            var avgY = sumY / latLngInDegr.length;
+            var avgZ = sumZ / latLngInDegr.length;
+
+            // convert average x, y, z coordinate to latitude and longtitude
+            var lng = Math.atan2(avgY, avgX);
+            var hyp = Math.sqrt(avgX * avgX + avgY * avgY);
+            var lat = Math.atan2(avgZ, hyp);
+            var coordinates = '{"latitude":"' + rad2degr(lat) + '","longitude":"' + rad2degr(lng) + '","type":"moveStart","module_type_name":"' + type + '","module_id":"' + module_id + '"}';
+            try {
+                message = new Paho.MQTT.Message(coordinates);
+                message.destinationName = "droneCommand";
+                client.send(message);
+            } catch (err) {
+                console.log(err);
+            }
+            modal.style.display = "none";
+            modal2.style.display = "none";
+        }
+
+
+        function rad2degr(rad) { return rad * 180 / Math.PI; }
+        function degr2rad(degr) { return degr * Math.PI / 180; }
+
+        function closeSpan() {
+            modal.style.display = "none";
+            modal2.style.display = "none";
+        }
+        function sendLocation() {
+            if (coords == startPoints[0] || coords == startPoints[1]) {
+                getLatLngCenter(startPoints);
+            } else {
+                try {
+                    var coordinates = '{"latitude":"' + coords[1] + '","longitude":"' + coords[0] + '","type":"move","module_type_name":"' + type + '","module_id":"' + module_id + '"}';
+                    message = new Paho.MQTT.Message(coordinates);
+                    message.destinationName = "droneCommand";
+                    client.send(message);
+                    modal.style.display = "none";
+                    modal2.style.display = "none";
+                } catch (err) {
+                    console.log(err);
+                }
+
+
+            }
+
+
+        }
+        function returnToHome() {
+            try {
+                var returns = '{"type":"return","module_type_name":"' + "Drone" + '"}';
+                console.log(returns);
+                message = new Paho.MQTT.Message(returns);
+                message.destinationName = "droneCommand";
+                client.send(message);
+            } catch (err) {
+                console.log(err);
+            }
+        }
+        function returnToHome2() {
+            try {
+                modal.style.display = "none";
+                modal2.style.display = "none";
+                var returns = '{"type":"return","module_type_name":"' + "Drone" + '"}';
+                message = new Paho.MQTT.Message(returns);
+                message.destinationName = "droneCommand";
+                client.send(message);
+            } catch (err) {
+                console.log(err);
+            }
+        }
+    </script>
+</body>
+
+</html>

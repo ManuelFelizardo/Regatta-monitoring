@@ -1,0 +1,199 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+	<title>Storage | Wave Drone</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="stylesheet" href="assets/css/bootstrap.min.css">
+	<link rel="stylesheet" href="assets/css/main.css" />
+	<script src="assets/js/mqttws31.js" type="text/javascript"></script>
+</head>
+
+<body>
+
+	<!-- Header -->
+	<header id="header">
+		<h1>
+			<strong>
+				<a href="index.html">Wave Drone</a>
+			</strong>
+		</h1>
+		<nav id="nav">
+			<ul>
+				<li>
+					<a href="index.html">Home</a>
+				</li>
+				<li>
+					<a href="map.html">Map</a>
+				</li>
+				<li>
+					<a href="realtime.html">Real Time</a>
+				</li>
+				<li>
+					<a href="ajust.html">Manual Settings</a>
+				</li>
+				<li>
+					<a href="storage.html">Storage</a>
+				</li>
+				<li>
+					<a href="help.html">Help</a>
+				</li>
+			</ul>
+		</nav>
+	</header>
+
+	<a href="#menu" class="navPanelToggle">
+		<span class="fa fa-bars"></span>
+	</a>
+
+	<section id="two" class="wrapper style1 special" style="padding-left: 2%; padding-right: 2%; padding-top: 1%">
+		<div class="progress">
+			<div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100"
+			 id="progress_space">
+				<h4 id="space" style="color: white"></h4>
+			</div>
+		</div>
+		<div class="container">
+			<div class="tab-wrap">
+				<input type="radio" id="tab1" name="tabGroup1" class="tab" checked>
+				<label for="tab1" onclick="refreshRest_1()">
+					<h3>Videos</h3>
+				</label>
+				<input style="display: none;" type="radio" id="tab2" name="tabGroup1" class="tab">
+				<label for="tab2">
+					<h3>Videos Unprocessed</h3>
+				</label>
+
+				<div class="tab__content">
+					<div class="row 50%" id="videos_GS">
+					</div>
+				</div>
+
+				<div class="tab__content">
+					<div class="row 50%" id="videos">
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+	<a></a>
+
+	<!-- Footer -->
+	<footer id="footer">
+		<div class="container">
+			<ul class="copyright">
+				<li>&copy; Wave Drone</li>
+				<li>PI Team 6</li>
+				<li>UA Race Tracking</li>
+			</ul>
+		</div>
+	</footer>
+
+	<!-- Scripts -->
+	<script src="assets/js/jquery.min.js"></script>
+	<script src="assets/js/skel.min.js"></script>
+	<script src="assets/js/util.js"></script>
+	<script src="assets/js/main.js"></script>
+	<script type="text/javascript" src="socket_client.js"></script>
+	<script type="text/javascript">
+		window.onload = refreshRest_1();
+		window.onload = refreshRest_2();
+
+		var array;
+		function refreshRest_1() {
+			var xhttp_image = new XMLHttpRequest();
+			xhttp_image.onreadystatechange = function () {
+				if (this.readyState == 4 && this.status == 200) {
+					var response = xhttp_image.responseText;
+					videos_gs(response);
+				}
+			};
+			xhttp_image.open("GET", "http://localhost:5000/getVideos", true);
+			xhttp_image.send();
+
+			function videos_gs(objs) {
+				var videoList = "";
+				data_videos = JSON.parse(objs);
+				for (var k in data_videos) {
+					videoList += '<div class="4u 12u$(xsmall)"><div class="image fit captioned"><video controls width="100%"><source src="http://localhost:5000/' + data_videos[k].videoPath + '" type="video/mp4"></video><h5 style="text-align: left">Recording: ' + data_videos[k].date + '</h5></div></div>';
+				}
+				var video_element = document.getElementById("videos_GS");
+				video_element.innerHTML = videoList;
+			}
+		}
+
+
+
+		function refreshRest_2() {
+			var xhttp_video = new XMLHttpRequest();
+			xhttp_video.onreadystatechange = function () {
+				if (this.readyState == 4 && this.status == 200) {
+					var response = xhttp_video.responseText;
+					process_videos(response);
+				}
+			};
+			xhttp_video.open("GET", "http://localhost:5000/consume_videos_processing", true);
+			xhttp_video.send();
+
+			function process_videos(objs) {
+				var videoListProcessing = "";
+				jsL = JSON.parse(objs);
+				array = jsL.list;
+				for (var k in array) {
+					var file_name = array[k].split('_');
+					var final_name = file_name[0] + "/" + file_name[1] + "/" + file_name[2] + " " + file_name[3] + ":" + file_name[4] + ":" + file_name[5];
+					if (final_name != "") {
+						videoListProcessing += '<div class="4u 12u$(xsmall)"><div class="image fit captioned"><h5><input type="checkbox" id="' + array[k] + '"name="copy"><label for="' + array[k] + '"></label>Recording : ' + final_name + ' <br></h5></div></div><input type="radio" value="Bike">';
+					}
+				}
+				document.getElementById("progress_space").style.width = jsL.storage.percentage_used;
+				var text = "Memory used: " + jsL.storage.percentage_used +
+					"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;||&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" +
+					"Availiable Space : " + jsL.storage.availiable_space;
+				document.getElementById("space").innerHTML = text;
+
+				videoListProcessing += '<a style="float:left" class="button fit small" onclick="checkAll()" id="checker">Check All Videos</a>'
+				videoListProcessing += '<a style="float:left" class="button fit small" onclick="getUnprocessed()">Get Videos</a>'
+				var video_element = document.getElementById("videos");
+				video_element.innerHTML = videoListProcessing;
+			}
+			setTimeout(refreshRest_2, 6000);
+		}
+
+		function getUnprocessed() {
+			var eles = [];
+			var inputs = document.getElementsByName("copy");
+			for (var i = 0; i < inputs.length; i++) {
+				if ($('#' + inputs[i].id).is(":checked"))
+					eles.push('"' + inputs[i].id + '"');
+			}
+			var msg = '{"type":"transfer_videos","list":[' + eles + ']}';
+			message = new Paho.MQTT.Message(msg);
+			message.destinationName = "GS_TOPIC";
+			client.send(message);
+		}
+		var isChecked = true;
+		function checkAll() {
+			var checkboxes = document.getElementsByName("copy");
+			if (isChecked) {
+				for (var i = 0; i < checkboxes.length; i++) {
+					if (checkboxes[i].type == 'checkbox') {
+						document.getElementById("checker").innerHTML = "UnCheck All Videos";
+						checkboxes[i].checked = true;
+					}
+				}
+			} else {
+				for (var i = 0; i < checkboxes.length; i++) {
+					if (checkboxes[i].type == 'checkbox') {
+						document.getElementById("checker").innerHTML = "Check All Videos";
+						checkboxes[i].checked = false;
+					}
+				}
+			}
+			isChecked = !isChecked;
+		}
+	</script>
+</body>
+
+</html>
