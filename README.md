@@ -5,7 +5,7 @@
 Regattas are events with numerous rules governing the conduct of boats and their crews, but there are no robust means of verifying their compliance. One of the challenges posed by regattas is the environment in which they are held, which does not allow for the fixed placement of electronic monitoring devices. Drones represent an interesting solution. The objective of our project is to assist in the aerial monitoring of specific aspects of the regatta field, thus providing the collection of evidence that can be used in real time.
 
 
-![alt text](https://github.com/ManuelFelizardo/Regatta-monitoring/drone.jpg?raw=true)
+![alt text](https://github.com/ManuelFelizardo/Regatta-monitoring/blob/main/drone.jpg?raw=true)
 ## Project Details
 
 ## Hardware Components
@@ -55,7 +55,7 @@ Regattas are events with numerous rules governing the conduct of boats and their
 
 ## System Architecture
 
-![alt text](https://github.com/ManuelFelizardo/Regatta-monitoring/architecture.jpg?raw=true)
+![alt text](https://github.com/ManuelFelizardo/Regatta-monitoring/blob/main/architecture.jpg?raw=true)
 
 ### Domain Model
 - **Client**: Connects to the drone control module via a web platform. Allows for viewing video feeds, drone data, and GPS information.
